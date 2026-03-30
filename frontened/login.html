@@ -5,32 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>FileVault — Sign In</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/style.css" />
 </head>
 <body>
- 
+
 <div class="bg-canvas"></div>
 <div class="grid-overlay"></div>
- 
+
 <div class="wrapper">
- 
+
   <!-- LEFT: FORM -->
   <div class="left-panel">
     <div class="logo">
       <div class="logo-icon">🗂</div>
       <div class="logo-name">FileVault</div>
     </div>
- 
+
     <div class="form-area">
       <div class="form-header">
-        <div class="tag">
-          <span>●</span> Secure Access
-        </div>
+        <div class="tag tag-blue"><span>●</span> Secure Access</div>
         <h1>Sign in to your<br><span>workspace</span></h1>
         <p>Manage, share, and collaborate on<br>files from anywhere in the world.</p>
       </div>
- 
+
       <form id="loginForm" novalidate>
+
         <div class="field">
           <label>Username</label>
           <div class="input-wrap">
@@ -38,7 +38,7 @@
             <input type="text" id="username" placeholder="e.g. john_doe" autocomplete="username" />
           </div>
         </div>
- 
+
         <div class="field">
           <label>Email Address</label>
           <div class="input-wrap">
@@ -46,7 +46,7 @@
             <input type="email" id="email" placeholder="you@company.com" autocomplete="email" />
           </div>
         </div>
- 
+
         <div class="field">
           <label>
             Password
@@ -55,29 +55,30 @@
           <div class="input-wrap">
             <span class="icon">🔒</span>
             <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" />
-            <button type="button" class="eye-toggle" id="eyeToggle" title="Show password">
+            <button type="button" class="eye-toggle" id="eyeToggle">
               <span id="eyeIcon">👁</span>
             </button>
           </div>
         </div>
- 
+
         <label class="remember-row">
           <input type="checkbox" id="remember" />
           <div class="checkbox" id="checkBox"></div>
           <span>Keep me signed in for 30 days</span>
         </label>
- 
-        <button type="submit" class="btn-signin" id="signInBtn">
+
+        <button type="submit" class="btn-primary btn-blue btn-signin" id="signInBtn">
           <span>Sign In — Access Files</span>
           <div class="spinner"></div>
         </button>
+
       </form>
- 
+
       <div class="divider"><span>or continue with</span></div>
- 
+
       <div class="social-row">
         <button class="btn-social" type="button">
-          <svg viewBox="0 0 24 24" fill="currentColor">
+          <svg viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -92,55 +93,40 @@
           Facebook
         </button>
       </div>
- 
-      <p class="signup-link">
-        No account yet? <a href="#">Create one free →</a>
-      </p>
+
+      <p class="signup-link">No account yet? <a href="register.html">Create one free →</a></p>
     </div>
- 
+
     <div class="panel-footer">
-      © 2025 FileVault Inc. · <a href="#" style="color:inherit;text-decoration:none">Privacy</a> · <a href="#" style="color:inherit;text-decoration:none">Terms</a>
+      © 2025 FileVault Inc. · <a href="#">Privacy</a> · <a href="#">Terms</a>
     </div>
   </div>
- 
-  <!-- RIGHT: VISUAL -->
-  <div class="right-panel">
+
+  <!-- RIGHT: FLOATING FILE CARDS -->
+  <div class="login-right-panel">
     <div class="preview-zone">
       <div class="file-cards">
- 
-        <!-- Card 1: Design -->
         <div class="fcard">
           <div class="fcard-icon" style="background:rgba(162,89,255,0.15);">🎨</div>
           <div class="fcard-name">Brand Assets v3.fig</div>
           <div class="fcard-meta">Figma · Shared with 4 people</div>
-          <div class="fcard-bar">
-            <div class="fcard-bar-fill" style="background:linear-gradient(90deg,#a259ff,#e879f9); --w:70%;"></div>
-          </div>
+          <div class="fcard-bar"><div class="fcard-bar-fill" style="background:linear-gradient(90deg,#a259ff,#e879f9);--w:70%;"></div></div>
         </div>
- 
-        <!-- Card 2: Data -->
         <div class="fcard">
           <div class="fcard-icon" style="background:rgba(79,139,255,0.15);">📊</div>
           <div class="fcard-name">Q4 Report Final.xlsx</div>
           <div class="fcard-meta">Excel · Updated 2h ago</div>
-          <div class="fcard-bar">
-            <div class="fcard-bar-fill" style="background:linear-gradient(90deg,#4f8bff,#22d3a5); --w:85%;"></div>
-          </div>
+          <div class="fcard-bar"><div class="fcard-bar-fill" style="background:linear-gradient(90deg,#4f8bff,#22d3a5);--w:85%;"></div></div>
         </div>
- 
-        <!-- Card 3: Docs -->
         <div class="fcard">
           <div class="fcard-icon" style="background:rgba(34,211,165,0.15);">📄</div>
           <div class="fcard-name">Product Roadmap.pdf</div>
           <div class="fcard-meta">PDF · 12.4 MB · Private</div>
-          <div class="fcard-bar">
-            <div class="fcard-bar-fill" style="background:linear-gradient(90deg,#22d3a5,#4f8bff); --w:55%;"></div>
-          </div>
+          <div class="fcard-bar"><div class="fcard-bar-fill" style="background:linear-gradient(90deg,#22d3a5,#4f8bff);--w:55%;"></div></div>
         </div>
- 
       </div>
     </div>
- 
+
     <div class="stats-strip">
       <div class="stats-title">All your files. Always there.</div>
       <div class="stats-sub">Secure cloud storage with real-time sync and team collaboration.</div>
@@ -160,15 +146,16 @@
       </div>
     </div>
   </div>
- 
+
 </div>
- 
-<!-- Toast notification -->
+
+<!-- Toast -->
 <div class="toast" id="toast">
   <span class="toast-icon" id="toastIcon"></span>
   <span id="toastMsg"></span>
 </div>
- 
-<script src="js/index.js"></script>
+
+<script src="../js/index.js"></script>
+<script src="../js/auth.js"></script>
 </body>
 </html>
