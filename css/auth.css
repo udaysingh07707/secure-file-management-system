@@ -1,6 +1,6 @@
 /* ============================================================
    FileVault — auth.css
-   Styles specific to login.html and register.html
+   Styles specific to login.html, register.html, otp.html
    Requires: style.css loaded first
    ============================================================ */
 
@@ -197,9 +197,9 @@
   font-size: 11px; font-weight: 500;
   padding: 2px 8px; border-radius: 100px; display: none;
 }
-.availability.checking { display: inline-block; background: rgba(79,139,255,0.1);  color: var(--accent); }
-.availability.available { display: inline-block; background: rgba(34,211,165,0.1); color: var(--success); }
-.availability.taken     { display: inline-block; background: rgba(255,83,112,0.1); color: var(--error); }
+.availability.checking  { display: inline-block; background: rgba(79,139,255,0.1);  color: var(--accent); }
+.availability.available { display: inline-block; background: rgba(34,211,165,0.1);  color: var(--success); }
+.availability.taken     { display: inline-block; background: rgba(255,83,112,0.1);  color: var(--error); }
 
 /* Password strength */
 .strength-wrap  { margin-top: 8px; }
@@ -217,25 +217,243 @@
 .terms-text a { color: var(--accent2); text-decoration: none; }
 .terms-text a:hover { text-decoration: underline; }
 
-/* ── CUSTOM SCROLLBAR (register + login panels) ── */
+/* ── OTP: LEFT PANEL ── */
+.otp-panel {
+  width: 50%;
+  justify-content: space-between;
+}
+
+/* OTP digit boxes */
+.otp-group {
+  display: flex; align-items: center; gap: 10px;
+  margin: 8px 0 6px;
+}
+.otp-box {
+  width: 52px; height: 60px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 24px; font-weight: 700;
+  text-align: center; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, transform 0.15s;
+  caret-color: var(--accent);
+}
+.otp-box:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  background: var(--surface);
+  transform: translateY(-2px);
+}
+.otp-box.filled {
+  border-color: rgba(79,139,255,0.5);
+  background: var(--surface);
+}
+.otp-box.valid {
+  border-color: var(--success);
+  box-shadow: 0 0 0 3px rgba(34,211,165,0.15);
+}
+.otp-box.invalid {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(255,83,112,0.15);
+  animation: shake 0.4s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-4px); }
+  40%     { transform: translateX(4px); }
+  60%     { transform: translateX(-4px); }
+  80%     { transform: translateX(2px); }
+}
+.otp-sep {
+  color: var(--text-dim); font-size: 18px;
+  flex-shrink: 0; margin: 0 2px;
+}
+.otp-error {
+  display: block; min-height: 16px;
+  margin-bottom: 10px;
+}
+
+/* Timer row */
+.otp-timer-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.otp-timer-label { font-size: 12px; color: var(--text-muted); }
+.otp-countdown {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px; font-weight: 700;
+  color: var(--accent);
+  transition: color 0.3s;
+}
+.otp-countdown.urgent { color: var(--error); }
+
+/* Resend row */
+.otp-resend-row {
+  text-align: center;
+  font-size: 13px; color: var(--text-dim);
+  margin-bottom: 16px;
+}
+.otp-resend-btn {
+  background: none; border: none;
+  color: var(--accent); font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500; cursor: pointer;
+  padding: 0 0 0 4px;
+  transition: opacity 0.2s;
+}
+.otp-resend-btn:hover:not(:disabled) { text-decoration: underline; }
+.otp-resend-btn:disabled { color: var(--text-dim); cursor: not-allowed; }
+
+/* Security note */
+.otp-security-note {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: rgba(162,89,255,0.06);
+  border: 1px solid rgba(162,89,255,0.15);
+  border-radius: 10px;
+  font-size: 12px; color: var(--text-muted);
+  line-height: 1.5;
+}
+.otp-note-icon { font-size: 15px; flex-shrink: 0; }
+
+/* ── OTP: RIGHT PANEL ── */
+.otp-right-panel {
+  flex: 1; position: relative;
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+  padding: 52px; overflow: hidden;
+  border-left: 1px solid var(--border);
+  animation: fadeIn 1s ease 0.3s both;
+}
+
+.otp-visual-center {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Shield animation */
+.shield-wrap {
+  position: relative;
+  width: 160px; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+}
+.shield-ring {
+  position: absolute; border-radius: 50%;
+  border: 1px solid;
+  animation: ringPulse 3s ease-in-out infinite;
+}
+.shield-ring-1 {
+  width: 160px; height: 160px;
+  border-color: rgba(79,139,255,0.3);
+  animation-delay: 0s;
+}
+.shield-ring-2 {
+  width: 220px; height: 220px;
+  border-color: rgba(79,139,255,0.15);
+  animation-delay: 0.4s;
+}
+.shield-ring-3 {
+  width: 290px; height: 290px;
+  border-color: rgba(79,139,255,0.07);
+  animation-delay: 0.8s;
+}
+@keyframes ringPulse {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.04); }
+}
+.shield-core {
+  width: 90px; height: 90px;
+  background: linear-gradient(135deg, rgba(79,139,255,0.15), rgba(162,89,255,0.15));
+  border: 1px solid rgba(79,139,255,0.3);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  box-shadow: 0 0 40px rgba(79,139,255,0.2);
+  animation: coreGlow 3s ease-in-out infinite;
+}
+@keyframes coreGlow {
+  0%,100% { box-shadow: 0 0 30px rgba(79,139,255,0.2); }
+  50%      { box-shadow: 0 0 60px rgba(79,139,255,0.4), 0 0 100px rgba(162,89,255,0.15); }
+}
+.shield-icon { animation: iconBounce 3s ease-in-out infinite; }
+@keyframes iconBounce {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+
+/* Floating digits */
+.float-digit {
+  position: absolute;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 28px;
+  color: transparent;
+  -webkit-text-stroke: 1.5px;
+  opacity: 0.18;
+  animation: floatDigit 5s ease-in-out infinite;
+  user-select: none; pointer-events: none;
+}
+.fd1 { top: 12%; left: 12%; -webkit-text-stroke-color: var(--accent);  animation-delay: 0s;    font-size: 22px; }
+.fd2 { top: 20%; right: 15%; -webkit-text-stroke-color: var(--accent2); animation-delay: -1s;   font-size: 34px; }
+.fd3 { top: 58%; left: 8%;   -webkit-text-stroke-color: var(--success); animation-delay: -2s;   font-size: 20px; }
+.fd4 { bottom: 28%; right: 10%; -webkit-text-stroke-color: var(--accent);  animation-delay: -3s; font-size: 30px; }
+.fd5 { bottom: 15%; left: 22%; -webkit-text-stroke-color: var(--accent2); animation-delay: -1.5s; font-size: 24px; }
+.fd6 { top: 40%; right: 6%;  -webkit-text-stroke-color: var(--success); animation-delay: -0.5s; font-size: 18px; }
+@keyframes floatDigit {
+  0%,100% { transform: translateY(0) rotate(-5deg); opacity: 0.18; }
+  50%      { transform: translateY(-14px) rotate(5deg); opacity: 0.28; }
+}
+
+/* OTP strip override */
+.otp-strip { position: relative; z-index: 1; }
+
+/* ── CUSTOM SCROLLBAR ── */
 .register-left-panel::-webkit-scrollbar,
 .register-right-panel::-webkit-scrollbar,
-.left-panel::-webkit-scrollbar {
+.left-panel::-webkit-scrollbar,
+.otp-panel::-webkit-scrollbar {
   width: 4px;
 }
 .register-left-panel::-webkit-scrollbar-track,
 .register-right-panel::-webkit-scrollbar-track,
-.left-panel::-webkit-scrollbar-track {
+.left-panel::-webkit-scrollbar-track,
+.otp-panel::-webkit-scrollbar-track {
   background: transparent;
 }
 .register-left-panel::-webkit-scrollbar-thumb,
 .register-right-panel::-webkit-scrollbar-thumb,
-.left-panel::-webkit-scrollbar-thumb {
+.left-panel::-webkit-scrollbar-thumb,
+.otp-panel::-webkit-scrollbar-thumb {
   background: var(--border-hover);
   border-radius: 4px;
 }
 .register-left-panel::-webkit-scrollbar-thumb:hover,
 .register-right-panel::-webkit-scrollbar-thumb:hover,
-.left-panel::-webkit-scrollbar-thumb:hover {
+.left-panel::-webkit-scrollbar-thumb:hover,
+.otp-panel::-webkit-scrollbar-thumb:hover {
   background: var(--text-dim);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 960px) {
+  .login-right-panel,
+  .register-right-panel,
+  .otp-right-panel { display: none !important; }
+  .left-panel,
+  .register-left-panel,
+  .otp-panel { width: 100% !important; border-right: none !important; }
+}
+@media (max-width: 480px) {
+  .left-panel,
+  .register-left-panel,
+  .otp-panel { padding: 24px 20px !important; }
+  .form-header h1 { font-size: 24px !important; }
+  .field-row { grid-template-columns: 1fr !important; }
+  .otp-box { width: 44px; height: 54px; font-size: 20px; }
 }

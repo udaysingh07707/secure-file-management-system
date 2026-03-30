@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FileVault — Verify Email</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="grid-overlay"></div>
+
+<div class="wrapper">
+
+  <!-- LEFT: OTP FORM -->
+  <div class="left-panel otp-panel">
+    <div class="logo">
+      <div class="logo-icon">🗂</div>
+      <div class="logo-name">FileVault</div>
+    </div>
+
+    <!-- Step Progress: Step 3 active -->
+    <div class="form-area">
+      <div class="progress-bar">
+        <div class="step-dot done">✓</div>
+        <div class="step-line"></div>
+        <div class="step-dot done">✓</div>
+        <div class="step-line"></div>
+        <div class="step-dot active">3</div>
+      </div>
+      <div class="step-label-row">
+        <div class="step-label">Account</div>
+        <div class="step-label">Details</div>
+        <div class="step-label active">Verify</div>
+      </div>
+
+      <div class="form-header">
+        <div class="tag tag-blue"><span>🔑</span> Email Verification</div>
+        <h1>Check your<br><span>inbox</span></h1>
+        <p>We sent a 6-digit code to<br>
+          <strong id="emailDisplay" style="color:var(--text);font-weight:500;">j***@company.com</strong>
+        </p>
+      </div>
+
+      <!-- OTP Input Row -->
+      <div class="otp-group" id="otpGroup">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" />
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <div class="otp-sep">—</div>
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      </div>
+
+      <span class="field-error otp-error" id="otpError"></span>
+
+      <!-- Timer + Resend -->
+      <div class="otp-timer-row">
+        <span class="otp-timer-label">Code expires in</span>
+        <span class="otp-countdown" id="countdown">04:59</span>
+      </div>
+
+      <button type="button" class="btn-primary btn-blue" id="verifyBtn" disabled>
+        <span>Verify &amp; Continue</span>
+        <div class="spinner"></div>
+      </button>
+
+      <div class="otp-resend-row">
+        <span>Didn't receive it?</span>
+        <button type="button" class="otp-resend-btn" id="resendBtn" disabled>
+          Resend code <span id="resendTimer"></span>
+        </button>
+      </div>
+
+      <div class="otp-security-note">
+        <span class="otp-note-icon">🛡️</span>
+        <span>This code is valid for 5 minutes. Never share it with anyone.</span>
+      </div>
+
+      <p class="auth-link" style="margin-top:20px;">
+        Wrong email? <a href="register.html">← Go back</a>
+      </p>
+    </div>
+
+    <div class="panel-footer">
+      © 2025 FileVault Inc. · <a href="#">Privacy</a> · <a href="#">Terms</a>
+    </div>
+  </div>
+
+  <!-- RIGHT: VISUAL PANEL -->
+  <div class="otp-right-panel">
+    <div class="otp-visual-center">
+
+      <!-- Animated shield -->
+      <div class="shield-wrap">
+        <div class="shield-ring shield-ring-3"></div>
+        <div class="shield-ring shield-ring-2"></div>
+        <div class="shield-ring shield-ring-1"></div>
+        <div class="shield-core">
+          <span class="shield-icon" id="shieldIcon">🔐</span>
+        </div>
+      </div>
+
+      <!-- Floating code digits -->
+      <div class="float-digit fd1">4</div>
+      <div class="float-digit fd2">8</div>
+      <div class="float-digit fd3">2</div>
+      <div class="float-digit fd4">7</div>
+      <div class="float-digit fd5">1</div>
+      <div class="float-digit fd6">9</div>
+
+    </div>
+
+    <!-- Info strip -->
+    <div class="stats-strip otp-strip">
+      <div class="stats-title">One last step.</div>
+      <div class="stats-sub">Verifying your email keeps your vault secure and lets us notify you of important activity.</div>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-num">2FA</div>
+          <div class="stat-label">Protected</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">OTP</div>
+          <div class="stat-label">One-time code</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">5min</div>
+          <div class="stat-label">Expiry window</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script src="../js/auth.js"></script>
+</body>
+</html>

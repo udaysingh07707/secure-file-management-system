@@ -1,0 +1,26 @@
+{
+  "name": "secure-file-management-system",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000s\u0000e\u0000c\u0000u\u0000r\u0000e\u0000-\u0000f\u0000i\u0000l\u0000e\u0000-\u0000m\u0000a\u0000n\u0000a\u0000g\u0000e\u0000m\u0000e\u0000n\u0000t\u0000-\u0000s\u0000y\u0000s\u0000t\u0000e\u0000m\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/udaysingh07707/secure-file-management-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/udaysingh07707/secure-file-management-system/issues"
+  },
+  "homepage": "https://github.com/udaysingh07707/secure-file-management-system#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "nodemailer": "^8.0.4"
+  }
+}
