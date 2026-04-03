@@ -1,0 +1,77 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  background: #0b0f1a;
+  color: white;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  height: 100vh;
+  background: rgba(20, 25, 45, 0.9);
+  padding: 20px;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar h2 {
+  color: #8b5cf6;
+  margin-bottom: 30px;
+}
+
+.sidebar a {
+  display: block;
+  margin: 15px 0;
+  color: #ccc;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.sidebar a:hover {
+  color: #8b5cf6;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  padding: 30px;
+}
+
+/* CARD */
+.card {
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px);
+}
+
+/* BUTTON */
+button {
+  padding: 8px 14px;
+  background: linear-gradient(90deg,#8b5cf6,#3b82f6);
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+/* FILE ROW */
+.file {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* INPUT */
+input {
+  margin-top: 10px;
+}

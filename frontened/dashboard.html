@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileVault Dashboard</title>
+
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>FileVault</h2>
+    <a href="#">🏠 Dashboard</a>
+    <a href="#">📤 Upload</a>
+    <a href="#">📂 Files</a>
+    <a href="#">🔗 Share</a>
+    <a href="#">🔐 Security</a>
+    <a href="#">🚪 Logout</a>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <h1>Welcome 👋</h1>
+
+    <!-- STORAGE -->
+    <div class="card">
+      <h3>📊 Storage</h3>
+      <p>120MB / 500GB used</p>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="card">
+      <h3>📤 Upload File</h3>
+      <input type="file" id="fileInput">
+      <button onclick="uploadFile()">Upload</button>
+    </div>
+
+    <!-- FILE LIST -->
+    <div class="card">
+      <h3>📂 My Files</h3>
+
+      <div class="file">
+        <span>document.pdf</span>
+        <div>
+          <button onclick="readFile()">Read</button>
+          <button onclick="showMetadata()">Metadata</button>
+          <button onclick="shareFile()">Share</button>
+        </div>
+      </div>
+
+      <div class="file">
+        <span>image.png</span>
+        <div>
+          <button onclick="readFile()">Read</button>
+          <button onclick="showMetadata()">Metadata</button>
+          <button onclick="shareFile()">Share</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="../js/dashboard.js"></script>
+
+</body>
+</html>
