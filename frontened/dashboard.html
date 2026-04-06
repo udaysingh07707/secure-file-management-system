@@ -1,71 +1,354 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FileVault Dashboard</title>
-
-  <link rel="stylesheet" href="../css/dashboard.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FileVault</title>
+  <link rel="stylesheet" href="../css/dashboard.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
-
 <body>
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <h2>FileVault</h2>
-    <a href="#">🏠 Dashboard</a>
-    <a href="#">📤 Upload</a>
-    <a href="#">📂 Files</a>
-    <a href="#">🔗 Share</a>
-    <a href="#">🔐 Security</a>
-    <a href="#">🚪 Logout</a>
-  </div>
+<div id="toast-container"></div>
 
-  <!-- MAIN -->
-  <div class="main">
+<div class="app">
 
-    <h1>Welcome 👋</h1>
-
-    <!-- STORAGE -->
-    <div class="card">
-      <h3>📊 Storage</h3>
-      <p>120MB / 500GB used</p>
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span>🗂</span>
+      <span class="logo-text">FileVault</span>
     </div>
 
-    <!-- UPLOAD -->
-    <div class="card">
-      <h3>📤 Upload File</h3>
-      <input type="file" id="fileInput">
-      <button onclick="uploadFile()">Upload</button>
+    <nav class="sidebar-nav">
+      <p class="nav-label">MAIN</p>
+      <a href="#" class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span> Dashboard</a>
+      <a href="#" class="nav-item" data-view="files"><span class="nav-icon">📁</span> My Files <span class="badge" id="file-count-badge">0</span></a>
+      <a href="#" class="nav-item" data-view="shared"><span class="nav-icon">👥</span> Shared <span class="badge badge-purple">3</span></a>
+      <a href="#" class="nav-item" data-view="starred"><span class="nav-icon">★</span> Starred</a>
+      <a href="#" class="nav-item" data-view="recent"><span class="nav-icon">🕐</span> Recent</a>
+      <p class="nav-label" style="margin-top:20px">WORKSPACE</p>
+      <a href="#" class="nav-item" data-view="uploads"><span class="nav-icon">⬆</span> Uploads</a>
+      <a href="#" class="nav-item" data-view="trash"><span class="nav-icon">🗑</span> Trash</a>
+      <a href="#" class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Settings</a>
+    </nav>
+
+    <div class="storage-meter">
+      <div class="storage-header">
+        <span>💾 Storage</span>
+        <span id="storage-text">0 B / 100 GB</span>
+      </div>
+      <div class="storage-bar"><div class="storage-fill" id="storage-fill" style="width:0%"></div></div>
     </div>
 
-    <!-- FILE LIST -->
-    <div class="card">
-      <h3>📂 My Files</h3>
+    <div class="sidebar-user">
+      <div class="user-avatar">AJ</div>
+      <div class="user-info">
+        <div class="user-name">Alex Johnson</div>
+        <div class="user-email">alex@filevault.io</div>
+      </div>
+      <button class="user-menu-btn" id="user-menu-btn">⋮</button>
+      <div class="user-dropdown" id="user-dropdown">
+        <a href="#">👤 Profile</a>
+        <a href="#">⚙ Settings</a>
+        <a href="#">🔒 Security</a>
+        <a href="#" style="color:#FF5370">↩ Sign out</a>
+      </div>
+    </div>
+  </aside>
 
-      <div class="file">
-        <span>document.pdf</span>
-        <div>
-          <button onclick="readFile()">Read</button>
-          <button onclick="showMetadata()">Metadata</button>
-          <button onclick="shareFile()">Share</button>
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <button class="hamburger" id="hamburger">☰</button>
+      <h2 class="topbar-title" id="topbar-title">Dashboard</h2>
+      <div class="topbar-search">
+        <span>🔍</span>
+        <input type="text" id="search-input" placeholder="Search files… (⌘K)" />
+        <span class="search-hint">⌘K</span>
+      </div>
+      <div class="topbar-right">
+        <button class="notif-btn">🔔<span class="notif-dot"></span></button>
+        <div class="user-avatar small">AJ</div>
+      </div>
+    </div>
+
+    <div class="view-container">
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <section class="view active" id="view-dashboard">
+        <div class="greeting-row">
+          <h1 class="greeting" id="greeting">Good morning, <span class="name-gradient">Alex</span> 👋</h1>
+          <p class="greeting-date" id="greeting-date"></p>
+        </div>
+
+        <div class="stat-cards">
+          <div class="stat-card" style="--ca:#4F8BFF">
+            <div class="stat-icon">📄</div>
+            <div class="stat-label">Total Files</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-delta">+5.2% this week</div>
+          </div>
+          <div class="stat-card" style="--ca:#A259FF">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">Shared Items</div>
+            <div class="stat-value" id="stat-shared">0</div>
+            <div class="stat-delta">3 active shares</div>
+          </div>
+          <div class="stat-card" style="--ca:#22D3A5">
+            <div class="stat-icon">💾</div>
+            <div class="stat-label">Storage Used</div>
+            <div class="stat-value" id="stat-storage">0 MB</div>
+            <div class="stat-delta">of 100 GB total</div>
+          </div>
+          <div class="stat-card" style="--ca:#F5A623">
+            <div class="stat-icon">🔐</div>
+            <div class="stat-label">Encrypted</div>
+            <div class="stat-value" id="stat-enc">0</div>
+            <div class="stat-delta">files protected</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Recent Files</span>
+              <a href="#" class="view-all" data-view="files">View all →</a>
+            </div>
+            <div id="recent-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Quick Upload</span></div>
+            <div class="upload-zone" id="dash-drop-zone">
+              <div class="upload-icon">☁</div>
+              <p>Drag &amp; drop files here</p>
+              <p class="upload-sub">or click to browse</p>
+              <div class="type-pills">
+                <span>PDF</span><span>DOC</span><span>XLS</span><span>PNG</span><span>JPG</span><span>ZIP</span>
+              </div>
+              <input type="file" id="dash-file-input" multiple style="display:none" />
+            </div>
+            <div id="upload-progress-list"></div>
+          </div>
+        </div>
+
+        <div class="dash-grid2">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title"><span class="live-dot"></span> Live Activity</span></div>
+            <div id="activity-feed"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Storage Breakdown</span></div>
+            <div class="donut-wrap">
+              <svg class="donut" viewBox="0 0 120 120">
+                <circle class="donut-track" cx="60" cy="60" r="45"/>
+                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#4F8BFF" stroke-dasharray="127 155" stroke-dashoffset="0"/>
+                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#A259FF" stroke-dasharray="85 197"  stroke-dashoffset="-127"/>
+                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#22D3A5" stroke-dasharray="42 240"  stroke-dashoffset="-212"/>
+                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#F5A623" stroke-dasharray="28 254"  stroke-dashoffset="-254"/>
+                <text x="60" y="56" class="donut-label">Used</text>
+                <text x="60" y="70" class="donut-val" id="donut-pct">0%</text>
+              </svg>
+              <div class="donut-legend">
+                <div><span style="background:#4F8BFF"></span>Documents 45%</div>
+                <div><span style="background:#A259FF"></span>Images 30%</div>
+                <div><span style="background:#22D3A5"></span>Videos 15%</div>
+                <div><span style="background:#F5A623"></span>Other 10%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ MY FILES ═══ -->
+      <section class="view" id="view-files">
+        <div class="files-toolbar">
+          <div class="ftl">
+            <h2 class="section-title">My Files</h2>
+            <span class="count-badge" id="files-count-badge">0 files</span>
+          </div>
+          <div class="ftr">
+            <div class="view-toggle">
+              <button class="toggle-btn active" id="grid-btn">⊞</button>
+              <button class="toggle-btn" id="list-btn">☰</button>
+            </div>
+            <select class="sort-select" id="sort-select">
+              <option value="date">Newest</option>
+              <option value="name">Name A–Z</option>
+              <option value="size">Largest</option>
+              <option value="type">Type</option>
+            </select>
+            <button class="btn-secondary" id="new-folder-btn">📁 New Folder</button>
+            <button class="btn-primary" id="upload-btn">⬆ Upload</button>
+            <input type="file" id="file-input" multiple style="display:none" />
+          </div>
+        </div>
+
+        <div class="filter-chips" id="filter-chips">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="document">📄 Documents</button>
+          <button class="chip" data-filter="image">🖼 Images</button>
+          <button class="chip" data-filter="video">🎬 Video</button>
+          <button class="chip" data-filter="archive">📦 Archives</button>
+          <button class="chip" data-filter="encrypted">🔐 Encrypted</button>
+        </div>
+
+        <div id="files-container" class="files-grid"></div>
+        <p id="search-msg" class="search-msg"></p>
+      </section>
+
+      <!-- ═══ SHARED ═══ -->
+      <section class="view" id="view-shared">
+        <h2 class="section-title">Shared Files</h2>
+        <div id="shared-list" class="files-grid"></div>
+      </section>
+
+      <!-- ═══ STARRED ═══ -->
+      <section class="view" id="view-starred">
+        <h2 class="section-title">Starred</h2>
+        <div id="starred-list" class="files-grid"></div>
+      </section>
+
+      <!-- ═══ RECENT ═══ -->
+      <section class="view" id="view-recent">
+        <h2 class="section-title">Recent</h2>
+        <div id="recent-view" class="files-grid"></div>
+      </section>
+
+      <!-- ═══ UPLOADS ═══ -->
+      <section class="view" id="view-uploads">
+        <h2 class="section-title">Upload History</h2>
+        <div id="uploads-list"></div>
+      </section>
+
+      <!-- ═══ TRASH ═══ -->
+      <section class="view" id="view-trash">
+        <h2 class="section-title">Trash</h2>
+        <div id="trash-list" class="files-grid"></div>
+      </section>
+
+      <!-- ═══ SETTINGS ═══ -->
+      <section class="view" id="view-settings">
+        <h2 class="section-title">Settings</h2>
+        <div class="panel" style="max-width:480px">
+          <p style="color:var(--tm);font-size:14px;margin-bottom:16px">User Preferences</p>
+          <label class="setting-row"><span>Display Name</span><input class="field" value="Alex Johnson" /></label>
+          <label class="setting-row"><span>Email</span><input class="field" value="alex@filevault.io" /></label>
+          <button class="btn-primary" style="margin-top:16px" onclick="toast('Settings saved','success')">Save Changes</button>
+        </div>
+      </section>
+
+    </div><!-- /view-container -->
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- ═══ FILE PREVIEW MODAL ═══ -->
+<div class="backdrop" id="preview-backdrop">
+  <div class="modal" id="preview-modal">
+    <button class="modal-x" id="preview-close">✕</button>
+    <div class="modal-body">
+      <div class="modal-preview" id="modal-preview-area"></div>
+      <div class="modal-meta">
+        <div class="mfname-row">
+          <span class="mfname" id="mfname"></span>
+          <button class="rename-pencil" id="rename-pencil" title="Rename">✏️</button>
+        </div>
+        <div id="rename-row" style="display:none" class="rename-row">
+          <input type="text" id="rename-input" class="field" />
+          <button class="btn-primary small" id="rename-save">Save</button>
+        </div>
+        <div id="meta-rows"></div>
+        <div class="modal-actions">
+          <button class="btn-open"    id="btn-open"     style="display:none">👁 Open</button>
+          <button class="btn-primary" id="btn-download">⬇ Download</button>
+          <button class="btn-sec"     id="btn-share">↗ Share</button>
+          <button class="btn-danger"  id="btn-delete">🗑 Delete</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
-      <div class="file">
-        <span>image.png</span>
-        <div>
-          <button onclick="readFile()">Read</button>
-          <button onclick="showMetadata()">Metadata</button>
-          <button onclick="shareFile()">Share</button>
-        </div>
+<!-- ═══ ENCRYPT UPLOAD MODAL ═══ -->
+<div class="backdrop" id="enc-backdrop">
+  <div class="modal sm-modal">
+    <button class="modal-x" id="enc-close">✕</button>
+    <h3 class="modal-title">🔐 Upload &amp; Encrypt</h3>
+    <p class="modal-sub">Optionally protect this file with a password using AES-256 encryption.</p>
+    <div id="enc-file-info" class="enc-file-info"></div>
+
+    <div id="enc-fields">
+      <label class="field-label">Password</label>
+      <div class="pw-row">
+        <input type="password" id="enc-pw"  class="field" placeholder="Enter password" />
+        <button class="pw-eye" onclick="toggleEye('enc-pw',this)">👁</button>
       </div>
-
+      <label class="field-label" style="margin-top:10px">Confirm Password</label>
+      <div class="pw-row">
+        <input type="password" id="enc-pw2" class="field" placeholder="Confirm password" />
+        <button class="pw-eye" onclick="toggleEye('enc-pw2',this)">👁</button>
+      </div>
+      <div class="pw-strength-bar"><div id="pw-strength-fill" class="pw-strength-fill"></div></div>
+      <p id="pw-strength-label" class="pw-strength-label"></p>
     </div>
 
+    <label class="checkbox-row" style="margin-top:12px">
+      <input type="checkbox" id="enc-toggle" checked />
+      <span>Encrypt this file</span>
+      <span class="enc-badge">AES-256-GCM</span>
+    </label>
+
+    <button class="btn-primary" id="enc-confirm" style="width:100%;margin-top:14px">🔐 Upload Encrypted</button>
+    <button class="btn-sec"     id="enc-skip"    style="width:100%;margin-top:8px">Upload without encryption</button>
   </div>
+</div>
 
-  <script src="../js/dashboard.js"></script>
+<!-- ═══ PASSWORD UNLOCK MODAL ═══ -->
+<div class="backdrop" id="pw-backdrop">
+  <div class="modal sm-modal">
+    <button class="modal-x" id="pw-close">✕</button>
+    <h3 class="modal-title">🔒 Unlock File</h3>
+    <p class="modal-sub" id="pw-sub">Enter the password to access this encrypted file.</p>
+    <div class="pw-row" style="margin-top:14px">
+      <input type="password" id="pw-input" class="field" placeholder="Password" />
+      <button class="pw-eye" onclick="toggleEye('pw-input',this)">👁</button>
+    </div>
+    <p id="pw-error" class="pw-error"></p>
+    <button class="btn-primary" id="pw-confirm" style="width:100%;margin-top:14px">Unlock</button>
+  </div>
+</div>
 
+<!-- ═══ NEW FOLDER MODAL ═══ -->
+<div class="backdrop" id="folder-backdrop">
+  <div class="modal sm-modal">
+    <button class="modal-x" id="folder-close">✕</button>
+    <h3 class="modal-title">New Folder</h3>
+    <input type="text" id="folder-input" class="field" placeholder="Folder name" />
+    <button class="btn-primary" id="folder-create" style="width:100%;margin-top:12px">Create Folder</button>
+  </div>
+</div>
+
+<!-- ═══ SHARE MODAL ═══ -->
+<div class="backdrop" id="share-backdrop">
+  <div class="modal sm-modal">
+    <button class="modal-x" id="share-close">✕</button>
+    <h3 class="modal-title">Share File</h3>
+    <p style="color:var(--tm);font-size:13px;margin-bottom:12px">Generate a link or send directly to a user.</p>
+    <div class="share-link-row">
+      <input type="text" id="share-link" class="field" readonly />
+      <button class="btn-primary small" id="copy-link">Copy</button>
+    </div>
+    <p style="color:var(--tm);font-size:12px;margin-top:12px">Or send to:</p>
+    <input type="text" id="share-user" class="field" placeholder="Username or email" style="margin-top:8px" />
+    <button class="btn-primary" id="share-send" style="width:100%;margin-top:10px">Send Share</button>
+  </div>
+</div>
+
+<script src="../js/dashboard.js"></script>
 </body>
 </html>
