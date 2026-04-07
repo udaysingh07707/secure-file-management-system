@@ -15,7 +15,7 @@
   animation: slideInLeft 0.8s cubic-bezier(0.16,1,0.3,1) both;
 }
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-30px); }
+  from { opacity: 0; transform: translateX(-30px); -webkit-transform: translateX(-30px); -moz-transform: translateX(-30px); -ms-transform: translateX(-30px); -o-transform: translateX(-30px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 

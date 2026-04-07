@@ -1,0 +1,7 @@
+.env
+node_modules/
+storage/files/*
+storage/temp/*
+data/users.json
+data/permissions.json
+data/files.json

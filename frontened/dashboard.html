@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FileVault</title>
+  <title>FileVault — Dashboard</title>
   <link rel="stylesheet" href="../css/dashboard.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -25,7 +25,7 @@
       <p class="nav-label">MAIN</p>
       <a href="#" class="nav-item active" data-view="dashboard"><span class="nav-icon">⬡</span> Dashboard</a>
       <a href="#" class="nav-item" data-view="files"><span class="nav-icon">📁</span> My Files <span class="badge" id="file-count-badge">0</span></a>
-      <a href="#" class="nav-item" data-view="shared"><span class="nav-icon">👥</span> Shared <span class="badge badge-purple">3</span></a>
+      <a href="#" class="nav-item" data-view="shared"><span class="nav-icon">👥</span> Shared</a>
       <a href="#" class="nav-item" data-view="starred"><span class="nav-icon">★</span> Starred</a>
       <a href="#" class="nav-item" data-view="recent"><span class="nav-icon">🕐</span> Recent</a>
       <p class="nav-label" style="margin-top:20px">WORKSPACE</p>
@@ -43,17 +43,15 @@
     </div>
 
     <div class="sidebar-user">
-      <div class="user-avatar">AJ</div>
+      <div class="user-avatar">?</div>
       <div class="user-info">
-        <div class="user-name">Alex Johnson</div>
-        <div class="user-email">alex@filevault.io</div>
+        <div class="user-name">Loading…</div>
+        <div class="user-email">—</div>
       </div>
       <button class="user-menu-btn" id="user-menu-btn">⋮</button>
       <div class="user-dropdown" id="user-dropdown">
-        <a href="#">👤 Profile</a>
-        <a href="#">⚙ Settings</a>
-        <a href="#">🔒 Security</a>
-        <a href="#" style="color:#FF5370">↩ Sign out</a>
+        <a href="#" data-view="settings">⚙ Settings</a>
+        <a href="#" id="logout-btn" style="color:#FF5370">↩ Sign out</a>
       </div>
     </div>
   </aside>
@@ -72,7 +70,7 @@
       </div>
       <div class="topbar-right">
         <button class="notif-btn">🔔<span class="notif-dot"></span></button>
-        <div class="user-avatar small">AJ</div>
+        <div class="user-avatar small">?</div>
       </div>
     </div>
 
@@ -81,7 +79,7 @@
       <!-- ═══ DASHBOARD ═══ -->
       <section class="view active" id="view-dashboard">
         <div class="greeting-row">
-          <h1 class="greeting" id="greeting">Good morning, <span class="name-gradient">Alex</span> 👋</h1>
+          <h1 class="greeting" id="greeting">Good morning, <span class="name-gradient">there</span> 👋</h1>
           <p class="greeting-date" id="greeting-date"></p>
         </div>
 
@@ -90,18 +88,18 @@
             <div class="stat-icon">📄</div>
             <div class="stat-label">Total Files</div>
             <div class="stat-value" id="stat-total">0</div>
-            <div class="stat-delta">+5.2% this week</div>
+            <div class="stat-delta">Your uploaded files</div>
           </div>
           <div class="stat-card" style="--ca:#A259FF">
             <div class="stat-icon">👥</div>
-            <div class="stat-label">Shared Items</div>
+            <div class="stat-label">Shared With Me</div>
             <div class="stat-value" id="stat-shared">0</div>
-            <div class="stat-delta">3 active shares</div>
+            <div class="stat-delta">Files shared by others</div>
           </div>
           <div class="stat-card" style="--ca:#22D3A5">
             <div class="stat-icon">💾</div>
             <div class="stat-label">Storage Used</div>
-            <div class="stat-value" id="stat-storage">0 MB</div>
+            <div class="stat-value" id="stat-storage">0 B</div>
             <div class="stat-delta">of 100 GB total</div>
           </div>
           <div class="stat-card" style="--ca:#F5A623">
@@ -118,7 +116,7 @@
               <span class="panel-title">Recent Files</span>
               <a href="#" class="view-all" data-view="files">View all →</a>
             </div>
-            <div id="recent-list"></div>
+            <div id="recent-list"><p style="color:var(--tm);font-size:13px;padding:16px 0">Loading…</p></div>
           </div>
           <div class="panel">
             <div class="panel-header"><span class="panel-title">Quick Upload</span></div>
@@ -145,18 +143,18 @@
             <div class="donut-wrap">
               <svg class="donut" viewBox="0 0 120 120">
                 <circle class="donut-track" cx="60" cy="60" r="45"/>
-                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#4F8BFF" stroke-dasharray="127 155" stroke-dashoffset="0"/>
-                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#A259FF" stroke-dasharray="85 197"  stroke-dashoffset="-127"/>
-                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#22D3A5" stroke-dasharray="42 240"  stroke-dashoffset="-212"/>
-                <circle class="donut-seg" cx="60" cy="60" r="45" stroke="#F5A623" stroke-dasharray="28 254"  stroke-dashoffset="-254"/>
+                <circle class="donut-seg" id="donut-doc" cx="60" cy="60" r="45" stroke="#4F8BFF" stroke-dasharray="0 283" stroke-dashoffset="0"/>
+                <circle class="donut-seg" id="donut-img" cx="60" cy="60" r="45" stroke="#A259FF" stroke-dasharray="0 283" stroke-dashoffset="0"/>
+                <circle class="donut-seg" id="donut-vid" cx="60" cy="60" r="45" stroke="#22D3A5" stroke-dasharray="0 283" stroke-dashoffset="0"/>
+                <circle class="donut-seg" id="donut-oth" cx="60" cy="60" r="45" stroke="#F5A623" stroke-dasharray="0 283" stroke-dashoffset="0"/>
                 <text x="60" y="56" class="donut-label">Used</text>
                 <text x="60" y="70" class="donut-val" id="donut-pct">0%</text>
               </svg>
               <div class="donut-legend">
-                <div><span style="background:#4F8BFF"></span>Documents 45%</div>
-                <div><span style="background:#A259FF"></span>Images 30%</div>
-                <div><span style="background:#22D3A5"></span>Videos 15%</div>
-                <div><span style="background:#F5A623"></span>Other 10%</div>
+                <div><span style="background:#4F8BFF"></span>Documents</div>
+                <div><span style="background:#A259FF"></span>Images</div>
+                <div><span style="background:#22D3A5"></span>Videos</div>
+                <div><span style="background:#F5A623"></span>Other</div>
               </div>
             </div>
           </div>
@@ -202,46 +200,50 @@
 
       <!-- ═══ SHARED ═══ -->
       <section class="view" id="view-shared">
-        <h2 class="section-title">Shared Files</h2>
+        <h2 class="section-title" style="margin-bottom:16px">Shared Files</h2>
         <div id="shared-list" class="files-grid"></div>
       </section>
 
       <!-- ═══ STARRED ═══ -->
       <section class="view" id="view-starred">
-        <h2 class="section-title">Starred</h2>
+        <h2 class="section-title" style="margin-bottom:16px">Starred</h2>
         <div id="starred-list" class="files-grid"></div>
       </section>
 
       <!-- ═══ RECENT ═══ -->
       <section class="view" id="view-recent">
-        <h2 class="section-title">Recent</h2>
+        <h2 class="section-title" style="margin-bottom:16px">Recent</h2>
         <div id="recent-view" class="files-grid"></div>
       </section>
 
       <!-- ═══ UPLOADS ═══ -->
       <section class="view" id="view-uploads">
-        <h2 class="section-title">Upload History</h2>
+        <h2 class="section-title" style="margin-bottom:16px">Upload History</h2>
         <div id="uploads-list"></div>
       </section>
 
       <!-- ═══ TRASH ═══ -->
       <section class="view" id="view-trash">
-        <h2 class="section-title">Trash</h2>
+        <h2 class="section-title" style="margin-bottom:16px">Trash</h2>
+        <p style="color:var(--tm);font-size:13px;margin-bottom:16px">Files restored from trash will reappear in My Files. Permanently deleted files cannot be recovered.</p>
         <div id="trash-list" class="files-grid"></div>
       </section>
 
       <!-- ═══ SETTINGS ═══ -->
       <section class="view" id="view-settings">
-        <h2 class="section-title">Settings</h2>
+        <h2 class="section-title" style="margin-bottom:20px">Settings</h2>
         <div class="panel" style="max-width:480px">
-          <p style="color:var(--tm);font-size:14px;margin-bottom:16px">User Preferences</p>
-          <label class="setting-row"><span>Display Name</span><input class="field" value="Alex Johnson" /></label>
-          <label class="setting-row"><span>Email</span><input class="field" value="alex@filevault.io" /></label>
+          <p style="color:var(--tm);font-size:13px;font-weight:600;margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px">Account</p>
+          <label class="setting-row"><span>Display Name</span><input class="field user-name-input" placeholder="Your name" /></label>
+          <label class="setting-row"><span>Email</span><input class="field user-email-input" placeholder="Your email" readonly /></label>
           <button class="btn-primary" style="margin-top:16px" onclick="toast('Settings saved','success')">Save Changes</button>
+          <hr style="border:none;border-top:1px solid var(--bd);margin:20px 0" />
+          <p style="color:var(--tm);font-size:13px;font-weight:600;margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px">Danger Zone</p>
+          <button class="btn-danger" id="logout-btn2" onclick="document.getElementById('logout-btn').click()">↩ Sign Out</button>
         </div>
       </section>
 
-    </div><!-- /view-container -->
+    </div>
   </main>
 </div>
 
@@ -264,7 +266,7 @@
         </div>
         <div id="meta-rows"></div>
         <div class="modal-actions">
-          <button class="btn-open"    id="btn-open"     style="display:none">👁 Open</button>
+          <button class="btn-open"    id="btn-open">👁 Open</button>
           <button class="btn-primary" id="btn-download">⬇ Download</button>
           <button class="btn-sec"     id="btn-share">↗ Share</button>
           <button class="btn-danger"  id="btn-delete">🗑 Delete</button>
@@ -279,9 +281,8 @@
   <div class="modal sm-modal">
     <button class="modal-x" id="enc-close">✕</button>
     <h3 class="modal-title">🔐 Upload &amp; Encrypt</h3>
-    <p class="modal-sub">Optionally protect this file with a password using AES-256 encryption.</p>
+    <p class="modal-sub">Protect this file with AES-256-GCM encryption before uploading.</p>
     <div id="enc-file-info" class="enc-file-info"></div>
-
     <div id="enc-fields">
       <label class="field-label">Password</label>
       <div class="pw-row">
@@ -296,13 +297,11 @@
       <div class="pw-strength-bar"><div id="pw-strength-fill" class="pw-strength-fill"></div></div>
       <p id="pw-strength-label" class="pw-strength-label"></p>
     </div>
-
     <label class="checkbox-row" style="margin-top:12px">
       <input type="checkbox" id="enc-toggle" checked />
       <span>Encrypt this file</span>
       <span class="enc-badge">AES-256-GCM</span>
     </label>
-
     <button class="btn-primary" id="enc-confirm" style="width:100%;margin-top:14px">🔐 Upload Encrypted</button>
     <button class="btn-sec"     id="enc-skip"    style="width:100%;margin-top:8px">Upload without encryption</button>
   </div>
@@ -338,14 +337,18 @@
   <div class="modal sm-modal">
     <button class="modal-x" id="share-close">✕</button>
     <h3 class="modal-title">Share File</h3>
-    <p style="color:var(--tm);font-size:13px;margin-bottom:12px">Generate a link or send directly to a user.</p>
+    <p style="color:var(--tm);font-size:13px;margin-bottom:12px">Copy shareable link or send directly to a user.</p>
     <div class="share-link-row">
       <input type="text" id="share-link" class="field" readonly />
       <button class="btn-primary small" id="copy-link">Copy</button>
     </div>
-    <p style="color:var(--tm);font-size:12px;margin-top:12px">Or send to:</p>
-    <input type="text" id="share-user" class="field" placeholder="Username or email" style="margin-top:8px" />
-    <button class="btn-primary" id="share-send" style="width:100%;margin-top:10px">Send Share</button>
+    <p style="color:var(--tm);font-size:12px;margin-top:16px;margin-bottom:6px">Or share with a user:</p>
+    <input type="text" id="share-user" class="field" placeholder="Username or email" style="margin-bottom:8px" />
+    <select id="share-perm" class="sort-select" style="width:100%;margin-bottom:10px">
+      <option value="read">Read only</option>
+      <option value="write">Read &amp; Write</option>
+    </select>
+    <button class="btn-primary" id="share-send" style="width:100%">Send Share</button>
   </div>
 </div>
 

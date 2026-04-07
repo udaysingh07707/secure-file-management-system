@@ -149,21 +149,24 @@ function updateStrength(pw) {
     setLoading(signInBtn, true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      /* Accept either username or email as the login identifier */
+      const identifier = username || email;
+      const res = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username: identifier, password }),
       });
       const data = await res.json();
 
       if (res.ok && data.success) {
-        if (remember.checked && username) {
-          localStorage.setItem('fv_remember', username);
+        if (remember.checked && identifier) {
+          localStorage.setItem('fv_remember', identifier);
         } else {
           localStorage.removeItem('fv_remember');
         }
-        /* Store masked email for OTP page */
-        sessionStorage.setItem('fv_otp_email', data.maskedEmail || email);
+        /* Store actual email for OTP verify and masked version for display */
+        sessionStorage.setItem('fv_reg_email', data.email || identifier);
+        sessionStorage.setItem('fv_is_login', data.isLogin ? '1' : '');
         showToast('Logged in! Redirecting…', 'success');
         setTimeout(() => window.location.href = 'otp.html', 1000);
       } else {
@@ -514,6 +517,7 @@ unInput.addEventListener('input', () => {
     verifyBtn.addEventListener('click', async () => {
       const code  = getCode();
       const email = sessionStorage.getItem('fv_reg_email') || '';
+      const isLogin = sessionStorage.getItem('fv_is_login') === '1';
 
       if (code.length < boxes.length) {
         if (otpError) otpError.textContent = 'Please enter all 6 digits.';
@@ -524,7 +528,10 @@ unInput.addEventListener('input', () => {
       if (otpError) otpError.textContent = '';
 
       try {
-        const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+        const endpoint = isLogin
+          ? 'http://localhost:5000/api/auth/login-verify'
+          : 'http://localhost:5000/api/auth/verify-otp';
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, code }),
@@ -535,7 +542,10 @@ unInput.addEventListener('input', () => {
           /* Visual: all boxes go green */
           boxes.forEach(b => { b.classList.add('valid'); b.classList.remove('filled'); });
           clearInterval(timerInterval);
-          showToast('Email verified! Welcome to FileVault 🎉', 'success');
+          /* Save token so user is logged in */
+          localStorage.setItem('fv_token', data.token);
+          localStorage.setItem('fv_user', JSON.stringify(data.user));
+          showToast('Verified! Redirecting…', 'success');
           setTimeout(() => window.location.href = 'dashboard.html', 1400);
         } else {
           boxes.forEach(b => b.classList.add('invalid'));

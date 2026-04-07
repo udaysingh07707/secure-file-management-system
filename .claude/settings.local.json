@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check js/auth.js)",
+      "Bash(node --check js/dashboard.js)",
+      "Bash(node -c server.js)",
+      "Bash(grep:*)",
+      "Bash(node -c \"D:\\\\Secure File Management System\\\\server.js\")",
+      "Read(//d D:/**)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

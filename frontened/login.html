@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>FileVault — Sign In</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/auth.css" />
+  <!-- style.css MUST load before auth.css (auth.css uses variables from style.css) -->
   <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
 </head>
 <body>
 
@@ -32,18 +33,10 @@
       <form id="loginForm" novalidate>
 
         <div class="field">
-          <label>Username</label>
+          <label>Username or Email</label>
           <div class="input-wrap">
             <span class="icon">👤</span>
-            <input type="text" id="username" placeholder="e.g. john_doe" autocomplete="username" />
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Email Address</label>
-          <div class="input-wrap">
-            <span class="icon">✉</span>
-            <input type="email" id="email" placeholder="you@company.com" autocomplete="email" />
+            <input type="text" id="username" placeholder="john_doe or you@email.com" autocomplete="username" />
           </div>
         </div>
 
@@ -149,13 +142,12 @@
 
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast">
   <span class="toast-icon" id="toastIcon"></span>
   <span id="toastMsg"></span>
 </div>
 
-<script src="../js/index.js"></script>
+<!-- Only auth.js — NO index.js -->
 <script src="../js/auth.js"></script>
 </body>
 </html>
