@@ -5,7 +5,8 @@
    ============================================================ */
 'use strict';
 
-const API = 'http://localhost:5000';
+// Auto-detect server URL (works locally and deployed)
+const API = window.location.origin;
 
 /* ── Auth guard ── */
 const TOKEN = localStorage.getItem('fv_token');

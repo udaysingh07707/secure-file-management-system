@@ -151,7 +151,7 @@ function updateStrength(pw) {
     try {
       /* Accept either username or email as the login identifier */
       const identifier = username || email;
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(window.location.origin + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: identifier, password }),
@@ -281,7 +281,7 @@ unInput.addEventListener('input', () => {
   // 3️⃣ Backend check (debounced)
   unTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/check-username?username=${encodeURIComponent(val)}`);
+      const res = await fetch(window.location.origin + `/api/auth/check-username?username=${encodeURIComponent(val)}`);
       const data = await res.json();
 
       if (data.available) {
@@ -364,7 +364,7 @@ unInput.addEventListener('input', () => {
     setLoading(regBtn, true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const res = await fetch(window.location.origin + '/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firstName, lastName, username, email, password }),
@@ -529,8 +529,8 @@ unInput.addEventListener('input', () => {
 
       try {
         const endpoint = isLogin
-          ? 'http://localhost:5000/api/auth/login-verify'
-          : 'http://localhost:5000/api/auth/verify-otp';
+          ? window.location.origin + '/api/auth/login-verify'
+          : window.location.origin + '/api/auth/verify-otp';
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -573,7 +573,7 @@ unInput.addEventListener('input', () => {
       resendBtn.disabled = true;
 
       try {
-        const res = await fetch('http://localhost:5000/api/auth/resend-otp', {
+        const res = await fetch(window.location.origin + '/api/auth/resend-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),

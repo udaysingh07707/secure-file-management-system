@@ -1,7 +1,7 @@
 /**
  * FileVault — Unified Backend Server
+ * Database: SQLite
  * Handles: Auth (register/login/OTP), File ops (upload/download/delete/share)
- * Storage: users.json, permissions.json, files saved to storage/files/
  */
 
 'use strict';
@@ -16,6 +16,7 @@ const nodemailer = require('nodemailer');
 const path       = require('path');
 const fs         = require('fs');
 const crypto     = require('crypto');
+const Database   = require('better-sqlite3');
 
 const app  = express();
 const PORT = 5000;
@@ -24,15 +25,52 @@ const PORT = 5000;
 const DATA_DIR    = path.join(__dirname, 'data');
 const STORAGE_DIR = path.join(__dirname, 'storage', 'files');
 const TEMP_DIR    = path.join(__dirname, 'storage', 'temp');
-const USERS_FILE  = path.join(DATA_DIR, 'users.json');
-const PERMS_FILE  = path.join(DATA_DIR, 'permissions.json');
-const FILES_FILE  = path.join(DATA_DIR, 'files.json');
 
 // Ensure dirs exist
 [DATA_DIR, STORAGE_DIR, TEMP_DIR].forEach(d => fs.mkdirSync(d, { recursive: true }));
-[USERS_FILE, PERMS_FILE, FILES_FILE].forEach(f => {
-  if (!fs.existsSync(f)) fs.writeFileSync(f, '{}');
-});
+
+// ─── Database Setup ─────────────────────────────────────────
+const db = new Database(path.join(DATA_DIR, 'filevault.db'));
+
+// Initialize tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    firstName TEXT NOT NULL,
+    lastName TEXT NOT NULL,
+    passwordHash TEXT NOT NULL,
+    verified INTEGER DEFAULT 0,
+    storageUsed INTEGER DEFAULT 0,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS files (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    ext TEXT,
+    size INTEGER,
+    fmt TEXT,
+    cat TEXT,
+    owner TEXT NOT NULL,
+    ownerEmail TEXT NOT NULL,
+    storedAs TEXT NOT NULL,
+    encrypted INTEGER DEFAULT 0,
+    uploadedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+    shared TEXT DEFAULT '[]'
+  );
+
+  CREATE TABLE IF NOT EXISTS permissions (
+    fileId TEXT NOT NULL,
+    sharedWith TEXT NOT NULL,
+    permission TEXT DEFAULT 'read',
+    PRIMARY KEY (fileId, sharedWith)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_files_owner ON files(ownerEmail);
+  CREATE INDEX IF NOT EXISTS idx_perms_file ON permissions(fileId);
+`);
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(cors({ origin: '*', credentials: true }));
@@ -50,14 +88,6 @@ app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
 app.use('/storage', express.static(STORAGE_DIR));
 app.use('/frontend', express.static(path.join(__dirname, 'frontened')));
-
-// ─── DB helpers ───────────────────────────────────────────────
-function readJSON(file) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; }
-}
-function writeJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
 
 // ─── Session store (in-memory, keyed by token) ───────────────
 const sessions = {};   // token → { username, email, expires }
@@ -144,9 +174,10 @@ function catOf(name) {
 app.get('/api/auth/check-username', (req, res) => {
   const { username } = req.query;
   if (!username) return res.json({ available: false });
-  const users = readJSON(USERS_FILE);
-  const taken = Object.values(users).some(u => u.username?.toLowerCase() === username.toLowerCase());
-  res.json({ available: !taken });
+
+  const stmt = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)');
+  const user = stmt.get(username);
+  res.json({ available: !user });
 });
 
 // Register → send OTP
@@ -155,27 +186,27 @@ app.post('/api/auth/register', async (req, res) => {
   if (!firstName || !lastName || !username || !email || !password)
     return res.status(400).json({ success: false, message: 'All fields required' });
 
-  const users = readJSON(USERS_FILE);
-
-  if (users[email])
+  // Check if email exists
+  const checkEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)');
+  if (checkEmail.get(email))
     return res.status(409).json({ success: false, message: 'Email already registered' });
-  if (Object.values(users).some(u => u.username?.toLowerCase() === username.toLowerCase()))
+
+  // Check if username exists
+  const checkUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)');
+  if (checkUser.get(username))
     return res.status(409).json({ success: false, message: 'Username already taken' });
 
   // Hash password
   const hash = await bcrypt.hash(password, 12);
 
-  // Save pending user (not verified yet)
-  users[email] = {
-    firstName, lastName, username, email,
-    passwordHash: hash,
-    verified: false,
-    createdAt: new Date().toISOString(),
-    storageUsed: 0,
-  };
-  writeJSON(USERS_FILE, users);
+  // Insert user
+  const insert = db.prepare(`
+    INSERT INTO users (firstName, lastName, username, email, passwordHash, verified, storageUsed)
+    VALUES (?, ?, ?, ?, ?, 0, 0)
+  `);
+  insert.run(firstName, lastName, username, email, hash);
 
-  // Generate + store OTP (stored first so dev-mode works even if email fails)
+  // Generate + store OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email] = { otp, expires: Date.now() + 5 * 60 * 1000 };
 
@@ -186,7 +217,6 @@ app.post('/api/auth/register', async (req, res) => {
     res.json({ success: true, maskedEmail: masked, message: 'OTP sent' });
   } catch (err) {
     console.error('Email error:', err.message);
-    // Still succeed so dev can test without email
     console.log(`🔧 DEV MODE OTP for ${email}: ${otp}`);
     res.json({ success: true, maskedEmail: email[0] + '***@' + email.split('@')[1], message: 'OTP sent (check console in dev)' });
   }
@@ -210,15 +240,35 @@ app.post('/api/auth/verify-otp', (req, res) => {
   delete otpStore[email];
 
   // Mark user as verified
-  const users = readJSON(USERS_FILE);
-  if (users[email]) { users[email].verified = true; writeJSON(USERS_FILE, users); }
+  const update = db.prepare('UPDATE users SET verified = 1 WHERE LOWER(email) = LOWER(?)');
+  update.run(email);
+
+  // Get user info
+  const getUser = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)');
+  const user = getUser.get(email);
+
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
 
   // Create session
   const token = genToken();
-  const user  = users[email];
-  sessions[token] = { username: user.username, email, firstName: user.firstName, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 };
+  sessions[token] = {
+    username: user.username,
+    email: user.email,
+    firstName: user.firstName,
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+  };
 
-  res.json({ success: true, token, user: { firstName: user.firstName, username: user.username, email } });
+  res.json({
+    success: true,
+    token,
+    user: {
+      firstName: user.firstName,
+      username: user.username,
+      email: user.email
+    }
+  });
 });
 
 // Resend OTP
@@ -245,8 +295,12 @@ app.post('/api/auth/login', async (req, res) => {
   if (!username || !password)
     return res.status(400).json({ success: false, message: 'Username and password required' });
 
-  const users = readJSON(USERS_FILE);
-  const user  = Object.values(users).find(u => u.username?.toLowerCase() === username.toLowerCase() || u.email?.toLowerCase() === username.toLowerCase());
+  // Find user by username or email
+  const getUser = db.prepare(`
+    SELECT * FROM users
+    WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)
+  `);
+  const user = getUser.get(username, username);
 
   if (!user)
     return res.status(401).json({ success: false, message: 'User not found' });
@@ -288,20 +342,48 @@ app.post('/api/auth/login-verify', (req, res) => {
 
   delete otpStore[email];
 
-  const users = readJSON(USERS_FILE);
-  const user  = users[email];
-  const token = genToken();
-  sessions[token] = { username: user.username, email, firstName: user.firstName, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 };
+  const getUser = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)');
+  const user = getUser.get(email);
 
-  res.json({ success: true, token, user: { firstName: user.firstName, username: user.username, email } });
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+
+  const token = genToken();
+  sessions[token] = {
+    username: user.username,
+    email: user.email,
+    firstName: user.firstName,
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000
+  };
+
+  res.json({
+    success: true,
+    token,
+    user: {
+      firstName: user.firstName,
+      username: user.username,
+      email: user.email
+    }
+  });
 });
 
 // Get current user info
 app.get('/api/auth/me', authMiddleware, (req, res) => {
-  const users = readJSON(USERS_FILE);
-  const user  = users[req.user.email];
+  const getUser = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)');
+  const user = getUser.get(req.user.email);
+
   if (!user) return res.status(404).json({ success: false });
-  res.json({ success: true, user: { firstName: user.firstName, lastName: user.lastName, username: user.username, email: user.email, storageUsed: user.storageUsed || 0 } });
+  res.json({
+    success: true,
+    user: {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      storageUsed: user.storageUsed || 0
+    }
+  });
 });
 
 // Logout
@@ -320,8 +402,6 @@ app.post('/api/files/upload', authMiddleware, upload.single('file'), (req, res) 
   if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
   const meta    = req.body.meta ? JSON.parse(req.body.meta) : {};
-  const allFiles = readJSON(FILES_FILE);
-  const users   = readJSON(USERS_FILE);
 
   const fileId  = crypto.randomBytes(12).toString('hex');
   const ext     = path.extname(req.file.originalname).slice(1).toLowerCase();
@@ -339,51 +419,72 @@ app.post('/api/files/upload', authMiddleware, upload.single('file'), (req, res) 
     storedAs:    req.file.filename,
     encrypted:   meta.encrypted || false,
     uploadedAt:  new Date().toISOString(),
-    shared:      [],
+    shared:      '[]',
   };
 
-  allFiles[fileId] = fileRecord;
-  writeJSON(FILES_FILE, allFiles);
+  // Insert file record
+  const insertFile = db.prepare(`
+    INSERT INTO files (id, name, ext, size, fmt, cat, owner, ownerEmail, storedAs, encrypted, uploadedAt, shared)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertFile.run(
+    fileRecord.id,
+    fileRecord.name,
+    fileRecord.ext,
+    fileRecord.size,
+    fileRecord.fmt,
+    fileRecord.cat,
+    fileRecord.owner,
+    fileRecord.ownerEmail,
+    fileRecord.storedAs,
+    fileRecord.encrypted ? 1 : 0,
+    fileRecord.uploadedAt,
+    fileRecord.shared
+  );
 
   // Update user storage
-  if (users[req.user.email]) {
-    users[req.user.email].storageUsed = (users[req.user.email].storageUsed || 0) + req.file.size;
-    writeJSON(USERS_FILE, users);
-  }
+  const updateStorage = db.prepare('UPDATE users SET storageUsed = storageUsed + ? WHERE LOWER(email) = LOWER(?)');
+  updateStorage.run(req.file.size, req.user.email);
 
   res.json({ success: true, file: fileRecord });
 });
 
 // List files for current user
 app.get('/api/files', authMiddleware, (req, res) => {
-  const allFiles = readJSON(FILES_FILE);
-  const perms    = readJSON(PERMS_FILE);
-
   // Files owned by user
-  const owned = Object.values(allFiles).filter(f => f.ownerEmail === req.user.email);
+  const getOwned = db.prepare('SELECT * FROM files WHERE LOWER(ownerEmail) = LOWER(?)');
+  const owned = getOwned.all(req.user.email);
 
   // Files shared with user
-  const sharedWithMe = Object.values(allFiles).filter(f => {
-    if (f.ownerEmail === req.user.email) return false;
-    const p = perms[f.id];
-    return p && (p[req.user.username] || p[req.user.email]);
-  }).map(f => ({ ...f, sharedWithMe: true, permission: (perms[f.id]?.[req.user.username] || perms[f.id]?.[req.user.email] || 'read') }));
+  const getShared = db.prepare(`
+    SELECT f.*, p.permission
+    FROM files f
+    JOIN permissions p ON f.id = p.fileId
+    WHERE LOWER(p.sharedWith) = LOWER(?) AND LOWER(f.ownerEmail) != LOWER(?)
+  `);
+  const sharedWithMe = getShared.all(req.user.email, req.user.email);
 
-  res.json({ success: true, files: [...owned, ...sharedWithMe] });
+  // Add sharedWithMe flag
+  const shared = sharedWithMe.map(f => ({ ...f, sharedWithMe: true, permission: f.permission }));
+
+  res.json({ success: true, files: [...owned, ...shared] });
 });
 
 // Download / stream file
 app.get('/api/files/:id/download', authMiddleware, (req, res) => {
-  const allFiles = readJSON(FILES_FILE);
-  const perms    = readJSON(PERMS_FILE);
-  const file     = allFiles[req.params.id];
+  const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
+  const file = getFile.get(req.params.id);
 
   if (!file) return res.status(404).json({ success: false, message: 'File not found' });
 
   // Permission check
-  const isOwner  = file.ownerEmail === req.user.email;
-  const perm     = perms[file.id]?.[req.user.username] || perms[file.id]?.[req.user.email];
-  if (!isOwner && !perm) return res.status(403).json({ success: false, message: 'No permission' });
+  const isOwner  = file.ownerEmail.toLowerCase() === req.user.email.toLowerCase();
+
+  if (!isOwner) {
+    const getPerm = db.prepare('SELECT permission FROM permissions WHERE fileId = ? AND (LOWER(sharedWith) = LOWER(?) OR LOWER(sharedWith) = LOWER(?))');
+    const perm = getPerm.get(req.params.id, req.user.username, req.user.email);
+    if (!perm) return res.status(403).json({ success: false, message: 'No permission' });
+  }
 
   const filePath = path.join(STORAGE_DIR, file.storedAs);
   if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File data missing' });
@@ -395,15 +496,18 @@ app.get('/api/files/:id/download', authMiddleware, (req, res) => {
 
 // Preview file (inline)
 app.get('/api/files/:id/preview', authMiddleware, (req, res) => {
-  const allFiles = readJSON(FILES_FILE);
-  const perms    = readJSON(PERMS_FILE);
-  const file     = allFiles[req.params.id];
+  const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
+  const file = getFile.get(req.params.id);
 
   if (!file) return res.status(404).json({ success: false });
 
-  const isOwner = file.ownerEmail === req.user.email;
-  const perm    = perms[file.id]?.[req.user.username] || perms[file.id]?.[req.user.email];
-  if (!isOwner && !perm) return res.status(403).json({ success: false });
+  const isOwner = file.ownerEmail.toLowerCase() === req.user.email.toLowerCase();
+
+  if (!isOwner) {
+    const getPerm = db.prepare('SELECT permission FROM permissions WHERE fileId = ? AND (LOWER(sharedWith) = LOWER(?) OR LOWER(sharedWith) = LOWER(?))');
+    const perm = getPerm.get(req.params.id, req.user.username, req.user.email);
+    if (!perm) return res.status(403).json({ success: false });
+  }
 
   const filePath = path.join(STORAGE_DIR, file.storedAs);
   if (!fs.existsSync(filePath)) return res.status(404).json({ success: false });
@@ -422,11 +526,11 @@ app.get('/api/files/:id/preview', authMiddleware, (req, res) => {
 
 // Delete file
 app.delete('/api/files/:id', authMiddleware, (req, res) => {
-  const allFiles = readJSON(FILES_FILE);
-  const file     = allFiles[req.params.id];
+  const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
+  const file = getFile.get(req.params.id);
 
   if (!file) return res.status(404).json({ success: false, message: 'Not found' });
-  if (file.ownerEmail !== req.user.email)
+  if (file.ownerEmail.toLowerCase() !== req.user.email.toLowerCase())
     return res.status(403).json({ success: false, message: 'Not your file' });
 
   // Delete from disk
@@ -434,14 +538,16 @@ app.delete('/api/files/:id', authMiddleware, (req, res) => {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
   // Update user storage
-  const users = readJSON(USERS_FILE);
-  if (users[req.user.email]) {
-    users[req.user.email].storageUsed = Math.max(0, (users[req.user.email].storageUsed || 0) - file.size);
-    writeJSON(USERS_FILE, users);
-  }
+  const updateStorage = db.prepare('UPDATE users SET storageUsed = MAX(0, storageUsed - ?) WHERE LOWER(email) = LOWER(?)');
+  updateStorage.run(file.size, req.user.email);
 
-  delete allFiles[req.params.id];
-  writeJSON(FILES_FILE, allFiles);
+  // Delete from DB
+  const deleteFile = db.prepare('DELETE FROM files WHERE id = ?');
+  deleteFile.run(req.params.id);
+
+  // Delete permissions
+  const deletePerms = db.prepare('DELETE FROM permissions WHERE fileId = ?');
+  deletePerms.run(req.params.id);
 
   res.json({ success: true });
 });
@@ -449,65 +555,82 @@ app.delete('/api/files/:id', authMiddleware, (req, res) => {
 // Rename file
 app.patch('/api/files/:id/rename', authMiddleware, (req, res) => {
   const { name } = req.body;
-  const allFiles  = readJSON(FILES_FILE);
-  const file      = allFiles[req.params.id];
+  const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
+  const file = getFile.get(req.params.id);
 
   if (!file) return res.status(404).json({ success: false });
-  if (file.ownerEmail !== req.user.email) return res.status(403).json({ success: false });
+  if (file.ownerEmail.toLowerCase() !== req.user.email.toLowerCase())
+    return res.status(403).json({ success: false });
   if (!name?.trim()) return res.status(400).json({ success: false, message: 'Name required' });
 
-  file.name = name.trim();
-  writeJSON(FILES_FILE, allFiles);
-  res.json({ success: true, file });
+  const update = db.prepare('UPDATE files SET name = ? WHERE id = ?');
+  update.run(name.trim(), req.params.id);
+
+  const updatedFile = getFile.get(req.params.id);
+  res.json({ success: true, file: updatedFile });
 });
 
 // Share file
 app.post('/api/files/:id/share', authMiddleware, (req, res) => {
-  const { shareWith, permission } = req.body; // shareWith = username or email, permission = 'read' | 'write'
-  const allFiles = readJSON(FILES_FILE);
-  const file     = allFiles[req.params.id];
-  const perms    = readJSON(PERMS_FILE);
+  const { shareWith, permission } = req.body;
+  const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
+  const file = getFile.get(req.params.id);
 
   if (!file) return res.status(404).json({ success: false });
-  if (file.ownerEmail !== req.user.email) return res.status(403).json({ success: false, message: 'Not your file' });
+  if (file.ownerEmail.toLowerCase() !== req.user.email.toLowerCase())
+    return res.status(403).json({ success: false, message: 'Not your file' });
 
-  if (!perms[req.params.id]) perms[req.params.id] = {};
-  perms[req.params.id][shareWith] = permission || 'read';
+  // Check if user exists
+  const getTargetUser = db.prepare('SELECT username FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)');
+  const targetUser = getTargetUser.get(shareWith, shareWith);
 
-  if (!file.shared) file.shared = [];
-  if (!file.shared.includes(shareWith)) file.shared.push(shareWith);
+  if (!targetUser)
+    return res.status(404).json({ success: false, message: 'User not found' });
 
-  writeJSON(PERMS_FILE, perms);
-  writeJSON(FILES_FILE, allFiles);
+  // Insert or update permission
+  const upsertPerm = db.prepare(`
+    INSERT INTO permissions (fileId, sharedWith, permission) VALUES (?, ?, ?)
+    ON CONFLICT(fileId, sharedWith) DO UPDATE SET permission = ?
+  `);
+  upsertPerm.run(req.params.id, shareWith, permission || 'read', permission || 'read');
 
   res.json({ success: true, message: `Shared with ${shareWith}` });
 });
 
 // File metadata
 app.get('/api/files/:id/meta', authMiddleware, (req, res) => {
-  const allFiles = readJSON(FILES_FILE);
-  const file     = allFiles[req.params.id];
+  const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
+  const file = getFile.get(req.params.id);
+
   if (!file) return res.status(404).json({ success: false });
-  const isOwner  = file.ownerEmail === req.user.email;
-  const perms    = readJSON(PERMS_FILE);
-  const perm     = perms[file.id]?.[req.user.username] || perms[file.id]?.[req.user.email];
-  if (!isOwner && !perm) return res.status(403).json({ success: false });
+
+  const isOwner = file.ownerEmail.toLowerCase() === req.user.email.toLowerCase();
+
+  if (!isOwner) {
+    const getPerm = db.prepare('SELECT permission FROM permissions WHERE fileId = ? AND (LOWER(sharedWith) = LOWER(?) OR LOWER(sharedWith) = LOWER(?))');
+    const perm = getPerm.get(req.params.id, req.user.username, req.user.email);
+    if (!perm) return res.status(403).json({ success: false });
+  }
+
   res.json({ success: true, file });
 });
 
 // Storage stats
 app.get('/api/stats', authMiddleware, (req, res) => {
-  const allFiles = readJSON(FILES_FILE);
-  const users    = readJSON(USERS_FILE);
-  const owned    = Object.values(allFiles).filter(f => f.ownerEmail === req.user.email);
-  const perms    = readJSON(PERMS_FILE);
-  const shared   = Object.values(allFiles).filter(f => {
-    const p = perms[f.id];
-    return p && (p[req.user.username] || p[req.user.email]);
-  });
+  const getOwned = db.prepare('SELECT * FROM files WHERE LOWER(ownerEmail) = LOWER(?)');
+  const owned = getOwned.all(req.user.email);
+
+  const getShared = db.prepare(`
+    SELECT f.* FROM files f
+    JOIN permissions p ON f.id = p.fileId
+    WHERE LOWER(p.sharedWith) = LOWER(?) AND LOWER(f.ownerEmail) != LOWER(?)
+  `);
+  const shared = getShared.all(req.user.email, req.user.email);
+
+  const getUser = db.prepare('SELECT storageUsed FROM users WHERE LOWER(email) = LOWER(?)');
+  const user = getUser.get(req.user.email);
 
   const totalSize = owned.reduce((s, f) => s + (f.size || 0), 0);
-  const u = users[req.user.email];
 
   // Category breakdown for donut chart
   const cats = { document: 0, image: 0, video: 0, other: 0 };
@@ -545,6 +668,7 @@ app.listen(PORT, () => {
   ╔══════════════════════════════════╗
   ║  FileVault Server running        ║
   ║  http://localhost:${PORT}           ║
+  ║  Database: SQLite                 ║
   ╚══════════════════════════════════╝
   `);
 });
