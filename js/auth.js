@@ -164,9 +164,18 @@ function updateStrength(pw) {
         } else {
           localStorage.removeItem('fv_remember');
         }
-        /* Store actual email for OTP verify and masked version for display */
-        sessionStorage.setItem('fv_reg_email', data.email || identifier);
+        /* Store actual email for OTP verify and partially mask for display */
+        const fullEmail = data.email || identifier;
+        const parts = fullEmail.split('@');
+        const localPart = parts[0];
+        const domain = parts[1] || '';
+        // Mask: first char + ** + last char + @domain
+        const masked = localPart.length > 3
+          ? localPart.slice(0, 3) + '***' + localPart.slice(-1) + '@' + domain
+          : localPart[0] + '***@' + domain;
+        sessionStorage.setItem('fv_reg_email', fullEmail);
         sessionStorage.setItem('fv_is_login', data.isLogin ? '1' : '');
+        sessionStorage.setItem('fv_otp_email', masked);
         showToast('Logged in! Redirecting…', 'success');
         setTimeout(() => window.location.href = 'otp.html', 1000);
       } else {
@@ -372,9 +381,13 @@ unInput.addEventListener('input', () => {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        /* Mask email for OTP display: j***@company.com */
-        const parts  = email.split('@');
-        const masked = parts[0][0] + '***@' + parts[1];
+        /* Partially mask email for OTP display: a**bc@gmail.com */
+        const parts = email.split('@');
+        const localPart = parts[0];
+        const domain = parts[1] || '';
+        const masked = localPart.length > 3
+          ? localPart.slice(0, 3) + '***' + localPart.slice(-1) + '@' + domain
+          : localPart[0] + '***@' + domain;
         sessionStorage.setItem('fv_otp_email', masked);
         sessionStorage.setItem('fv_reg_email', email);
         showToast('Account created! Sending verification code…', 'success');

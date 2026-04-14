@@ -7,7 +7,22 @@
       "Bash(grep:*)",
       "Bash(node -c \"D:\\\\Secure File Management System\\\\server.js\")",
       "Read(//d D:/**)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(cd /d \"D:\\\\os project\\\\secure-file-management-system\")",
+      "Bash(node server.js)",
+      "Bash(rm:*)",
+      "Bash(curl -s http://localhost:5000/)",
+      "Bash(curl:*)",
+      "Bash(start:*)",
+      "Bash(npm start:*)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill:*)",
+      "Bash(powershell:*)",
+      "Bash(findstr :5000)",
+      "Bash(timeout 3)",
+      "Bash(node:*)",
+      "Bash(sqlite3:*)",
+      "Bash(pkill -f \"node.*server.js\")"
     ]
   }
 }

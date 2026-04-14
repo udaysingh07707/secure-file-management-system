@@ -1,17 +1,19 @@
-# Environment variables (contains sensitive data)
+# Environment variables
 .env
 
 # Dependencies
 node_modules/
 
-# Storage (uploaded files)
+# Storage (ignore everything first)
 storage/files/*
 storage/temp/*
-!storage/files/.gitkeep
-!storage/temp/.gitkeep
 
-# Local database (will be created on server)
-data/*.db
+# Then allow contents
+!storage/files/**
+!storage/temp/**
+
+# Database
+!data/filevault.db
 
 # Logs
 *.log

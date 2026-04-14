@@ -43,6 +43,7 @@ db.exec(`
     passwordHash TEXT NOT NULL,
     verified INTEGER DEFAULT 0,
     storageUsed INTEGER DEFAULT 0,
+    storageLimit INTEGER DEFAULT 107374182400,
     createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -58,7 +59,16 @@ db.exec(`
     storedAs TEXT NOT NULL,
     encrypted INTEGER DEFAULT 0,
     uploadedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-    shared TEXT DEFAULT '[]'
+    shared TEXT DEFAULT '[]',
+    isFolder INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS folders (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    ownerEmail TEXT NOT NULL,
+    parentId TEXT,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS permissions (
@@ -71,6 +81,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_files_owner ON files(ownerEmail);
   CREATE INDEX IF NOT EXISTS idx_perms_file ON permissions(fileId);
 `);
+
+  // Migration: Add storageLimit if not exists
+  try {
+    db.exec("ALTER TABLE users ADD COLUMN storageLimit INTEGER DEFAULT 107374182400");
+  } catch (e) { /* column may already exist */ }
+
+  // Migration: Add isFolder to files if not exists
+  try {
+    db.exec("ALTER TABLE files ADD COLUMN isFolder INTEGER DEFAULT 0");
+  } catch (e) { /* column may already exist */ }
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(cors({ origin: '*', credentials: true }));
@@ -201,8 +221,8 @@ app.post('/api/auth/register', async (req, res) => {
 
   // Insert user
   const insert = db.prepare(`
-    INSERT INTO users (firstName, lastName, username, email, passwordHash, verified, storageUsed)
-    VALUES (?, ?, ?, ?, ?, 0, 0)
+    INSERT INTO users (firstName, lastName, username, email, passwordHash, verified, storageUsed, storageLimit)
+    VALUES (?, ?, ?, ?, ?, 0, 0, 107374182400)
   `);
   insert.run(firstName, lastName, username, email, hash);
 
@@ -391,6 +411,24 @@ app.post('/api/auth/logout', authMiddleware, (req, res) => {
   const token = req.headers['authorization']?.replace('Bearer ', '');
   delete sessions[token];
   res.json({ success: true });
+});
+
+// Update user profile
+app.patch('/api/auth/profile', authMiddleware, async (req, res) => {
+  const { firstName, lastName } = req.body;
+  const email = req.user.email;
+
+  try {
+    const updateUser = db.prepare('UPDATE users SET firstName = ?, lastName = ? WHERE LOWER(email) = LOWER(?)');
+    updateUser.run(firstName || '', lastName || '', email);
+
+    const getUser = db.prepare('SELECT firstName, lastName, username, email FROM users WHERE LOWER(email) = LOWER(?)');
+    const user = getUser.get(email);
+
+    res.json({ success: true, user: { firstName: user.firstName, lastName: user.lastName, username: user.username, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -597,6 +635,42 @@ app.post('/api/files/:id/share', authMiddleware, (req, res) => {
   res.json({ success: true, message: `Shared with ${shareWith}` });
 });
 
+// Create folder
+app.post('/api/folders', authMiddleware, (req, res) => {
+  const { name, parentId } = req.body;
+  if (!name?.trim()) return res.status(400).json({ success: false, message: 'Folder name required' });
+
+  const folderId = crypto.randomBytes(12).toString('hex');
+  const insertFolder = db.prepare(`
+    INSERT INTO folders (id, name, ownerEmail, parentId) VALUES (?, ?, ?, ?)
+  `);
+  insertFolder.run(folderId, name.trim(), req.user.email, parentId || null);
+
+  res.json({ success: true, folder: { id: folderId, name: name.trim(), parentId } });
+});
+
+// List folders
+app.get('/api/folders', authMiddleware, (req, res) => {
+  const getFolders = db.prepare('SELECT * FROM folders WHERE LOWER(ownerEmail) = LOWER(?)');
+  const folders = getFolders.all(req.user.email);
+  res.json({ success: true, folders });
+});
+
+// Delete folder
+app.delete('/api/folders/:id', authMiddleware, (req, res) => {
+  const getFolder = db.prepare('SELECT * FROM folders WHERE id = ?');
+  const folder = getFolder.get(req.params.id);
+
+  if (!folder) return res.status(404).json({ success: false, message: 'Folder not found' });
+  if (folder.ownerEmail.toLowerCase() !== req.user.email.toLowerCase())
+    return res.status(403).json({ success: false, message: 'Not your folder' });
+
+  const deleteFolder = db.prepare('DELETE FROM folders WHERE id = ?');
+  deleteFolder.run(req.params.id);
+
+  res.json({ success: true });
+});
+
 // File metadata
 app.get('/api/files/:id/meta', authMiddleware, (req, res) => {
   const getFile = db.prepare('SELECT * FROM files WHERE id = ?');
@@ -627,10 +701,13 @@ app.get('/api/stats', authMiddleware, (req, res) => {
   `);
   const shared = getShared.all(req.user.email, req.user.email);
 
-  const getUser = db.prepare('SELECT storageUsed FROM users WHERE LOWER(email) = LOWER(?)');
+  const getUser = db.prepare('SELECT storageUsed, storageLimit FROM users WHERE LOWER(email) = LOWER(?)');
   const user = getUser.get(req.user.email);
 
-  const totalSize = owned.reduce((s, f) => s + (f.size || 0), 0);
+  // Use real storage from user account
+  const totalSize = user?.storageUsed || 0;
+  const storageLimit = user?.storageLimit || (100 * 1024 * 1024 * 1024); // Default 100 GB
+  const storagePct = ((totalSize / storageLimit) * 100).toFixed(2);
 
   // Category breakdown for donut chart
   const cats = { document: 0, image: 0, video: 0, other: 0 };
@@ -647,8 +724,8 @@ app.get('/api/stats', authMiddleware, (req, res) => {
       encrypted: owned.filter(f => f.encrypted).length,
       storageUsed: totalSize,
       storageUsedFmt: fmtBytes(totalSize),
-      storageLimit: 100 * 1024 * 1024 * 1024, // 100 GB
-      storagePct: ((totalSize / (100 * 1024 * 1024 * 1024)) * 100).toFixed(2),
+      storageLimit: storageLimit,
+      storagePct: storagePct,
       categories: cats,
     }
   });

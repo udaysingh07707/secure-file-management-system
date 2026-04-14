@@ -313,8 +313,35 @@ function renderTrash() {
 function renderSettings() {
   const s = document.getElementById('view-settings');
   if (!s) return;
-  s.querySelector('.user-name-input')?.setAttribute('value', USER.firstName + ' ' + (USER.lastName||''));
-  s.querySelector('.user-email-input')?.setAttribute('value', USER.email||'');
+  const nameInput = s.querySelector('.user-name-input');
+  const emailInput = s.querySelector('.user-email-input');
+  if (nameInput) nameInput.value = USER.firstName + ' ' + (USER.lastName||'');
+  if (emailInput) emailInput.value = USER.email || '';
+
+  /* Bind save button */
+  const saveBtn = s.querySelector('.btn-primary');
+  if (saveBtn && !saveBtn._bound) {
+    saveBtn._bound = true;
+    saveBtn.addEventListener('click', async () => {
+      const nameParts = (nameInput?.value || '').trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+      const res = await api('PATCH', '/api/auth/profile', { firstName, lastName });
+      saveBtn.textContent = 'Save Changes';
+      saveBtn.disabled = false;
+      if (res?.success) {
+        USER.firstName = res.user.firstName;
+        USER.lastName = res.user.lastName;
+        localStorage.setItem('fv_user', JSON.stringify(USER));
+        populateUser();
+        toast('Settings saved!', 'success');
+      } else {
+        toast('Failed to save settings', 'error');
+      }
+    });
+  }
 }
 
 /* ── Card templates ── */
@@ -570,6 +597,9 @@ function addActivity(color, text) {
   activity.unshift({ c: color, t: text, a: 'just now' });
   activity = activity.slice(0, 50);
   saveActivity();
+  // Also add as notification
+  const iconMap = { '#4F8BFF': '📤', '#22D3A5': '✏️', '#F5A623': '🔐', '#FF5370': '🗑️', '#A259FF': '🔗' };
+  addNotification(iconMap[color] || '📌', text, text, false);
 }
 
 /* ── Encrypt upload modal ── */
@@ -703,11 +733,74 @@ function bind() {
   });
 
   /* User menu */
-  document.getElementById('user-menu-btn').addEventListener('click', e => {
-    e.stopPropagation();
+  function toggleUserMenu(e) {
+    e?.stopPropagation();
     document.getElementById('user-dropdown').classList.toggle('open');
-  });
+    document.getElementById('notif-dropdown').classList.remove('open');
+  }
+  document.getElementById('user-menu-btn').addEventListener('click', toggleUserMenu);
+  document.getElementById('user-avatar-click')?.addEventListener('click', toggleUserMenu);
+  document.getElementById('user-info-click')?.addEventListener('click', toggleUserMenu);
   document.addEventListener('click', () => document.getElementById('user-dropdown').classList.remove('open'));
+
+  /* Notifications */
+  let notifications = [];
+  function renderNotifications() {
+    const list = document.getElementById('notif-list');
+    const empty = document.getElementById('notif-empty');
+    if (!notifications.length) {
+      if (empty) empty.style.display = 'block';
+      list.innerHTML = '';
+      list.appendChild(empty);
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    list.innerHTML = notifications.map((n, i) => `
+      <div class="notif-item${i === 0 && !n.read ? ' unread' : ''}" onclick="markNotifRead(${i})">
+        <div class="notif-icon">${n.icon}</div>
+        <div class="notif-content">
+          <div class="notif-title">${x(n.title)}</div>
+          <div class="notif-desc">${x(n.desc)}</div>
+          <div class="notif-time">${n.time}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  function addNotification(icon, title, desc, read = false) {
+    notifications.unshift({ icon, title, desc, time: 'Just now', read });
+    if (notifications.length > 20) notifications = notifications.slice(0, 20);
+    renderNotifications();
+    updateNotifDot();
+  }
+  function updateNotifDot() {
+    const dot = document.getElementById('notif-dot');
+    const hasUnread = notifications.some(n => !n.read);
+    if (dot) dot.style.display = hasUnread ? 'block' : 'none';
+  }
+  function markNotifRead(idx) {
+    if (notifications[idx]) {
+      notifications[idx].read = true;
+      renderNotifications();
+      updateNotifDot();
+    }
+  }
+  function clearNotifications() {
+    notifications = [];
+    renderNotifications();
+    updateNotifDot();
+    toast('Notifications cleared', 'info');
+  }
+  document.getElementById('notif-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    document.getElementById('notif-dropdown').classList.toggle('open');
+    document.getElementById('user-dropdown').classList.remove('open');
+  });
+  document.getElementById('notif-clear-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    clearNotifications();
+  });
+  document.getElementById('user-avatar-small')?.addEventListener('click', toggleUserMenu);
+  document.addEventListener('click', () => document.getElementById('notif-dropdown').classList.remove('open'));
 
   /* Logout */
   document.getElementById('logout-btn')?.addEventListener('click', async e => {
@@ -715,6 +808,28 @@ function bind() {
     await api('POST', '/api/auth/logout');
     localStorage.clear();
     window.location.href = 'login.html';
+  });
+
+  /* Folder tree - filter files by category */
+  document.querySelectorAll('.tree-item').forEach(el => {
+    el.addEventListener('click', e => {
+      e.preventDefault();
+      const folder = el.dataset.folder;
+      document.querySelectorAll('.tree-item').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      /* Switch to files view and apply filter */
+      switchView('files');
+      if (folder === 'root') {
+        filter = 'all';
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        document.querySelector('.chip[data-filter="all"]')?.classList.add('active');
+      } else {
+        filter = folder;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        document.querySelector(`.chip[data-filter="${folder}"]`)?.classList.add('active');
+      }
+      renderFiles();
+    });
   });
 
   /* Search */
@@ -813,11 +928,24 @@ function bind() {
   document.getElementById('new-folder-btn').addEventListener('click', () => { document.getElementById('folder-input').value=''; openModal('folder-backdrop'); });
   document.getElementById('folder-close').addEventListener('click', () => closeModal('folder-backdrop'));
   document.getElementById('folder-backdrop').addEventListener('click', e => { if (e.target===e.currentTarget) closeModal('folder-backdrop'); });
-  document.getElementById('folder-create').addEventListener('click', () => {
+  document.getElementById('folder-create').addEventListener('click', async () => {
     const name = document.getElementById('folder-input').value.trim();
     if (!name) { toast('Enter a folder name', 'error'); return; }
     const btn = document.getElementById('folder-create'); btn.textContent='Creating…'; btn.disabled=true;
-    setTimeout(() => { btn.textContent='Create Folder'; btn.disabled=false; closeModal('folder-backdrop'); toast(`Folder "${name}" created`,'success'); }, 800);
+    try {
+      const res = await api('POST', '/api/folders', { name });
+      btn.textContent='Create Folder'; btn.disabled=false;
+      if (res?.success) {
+        closeModal('folder-backdrop');
+        toast(`Folder "${name}" created`,'success');
+        addActivity('#A259FF', `Folder "${name}" created`);
+      } else {
+        toast(res?.message || 'Failed to create folder', 'error');
+      }
+    } catch (err) {
+      btn.textContent='Create Folder'; btn.disabled=false;
+      toast('Failed to create folder', 'error');
+    }
   });
 
   /* Share modal */
